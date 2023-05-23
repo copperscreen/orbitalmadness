@@ -1,0 +1,19 @@
+{
+  "name": "orbitalmadness",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server/Server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server/Server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mime-types": "^2.1.35",
+    "node-datachannel": "^0.3.4",
+    "three": "^0.152.2",
+    "ws": "^8.12.1"
+  }
+}

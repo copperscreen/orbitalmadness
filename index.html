@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="main.css" type="text/css" media="all">
+  <script src="config.js"></script>
+  <script src="const.js"></script>
+  <script src="conn.js"></script>
+
+<script src="log.js" defer></script>
+<script src="planets.js"></script>
+<script src="three.min.js"></script>
+<script src="wrap.js"></script>
+<script src="renderer.js"></script>
+<script src="world.js"></script>
+<script src="gravity.js"></script>
+
+  <script>
+	//let clrs = {cross: 0xeeeeee,   clear: 0x000000,   indi: 0x0000ff,   star: 0xcccccc,   ship: 0x00ff00,   shot: 0x0000ff,   exp: 0xffffff};
+	function showWait(enabled){
+		document.body.classList[enabled?'add':'remove']('connected');
+	}
+	window.onload = ev => {
+		let playerName, playerId, playerSecret, score, planets, age;
+		let lastMessageCounter = 0;
+		let ships = [];
+		let inverted = true;
+		let running = false;
+		let renderer = new Renderer('canvas');
+		//let shots = new Shots();
+		let conn;
+		let world = new World(new Gravity(planets));
+		reconnect();
+		function reconnect(){
+			showWait(true);
+			log('main', 'reconnect', [playerId, playerSecret, Date.now()]);
+			if (conn){
+				delete conn.message;
+				delete conn.reliableMessage;
+				delete conn.open;
+				delete conn.close;
+			}
+			conn = new Conn();
+			conn.close = reconnect;
+			conn.open = () => {
+				showWait(false);
+				log('main', 'open', [playerId, playerSecret, Date.now()]);
+				if (playerSecret){
+					conn.reliableSend({'name': playerName, 'secret' : playerSecret});
+				}else{
+					requestName();
+				}
+			}
+			conn.error = () => {
+			}
+			conn.message = msg => {
+				if (!msg.outdated){
+					world.update(msg, renderer);
+				}
+			}
+			conn.reliableMessage = msg => {
+				if (msg.score) score = msg.score;
+				if (msg.id) {
+					world.setPlayerId(playerId = msg.id); 
+					running = !document.getElementById('login').classList.contains('on');
+				}
+				if (msg.names && playerName === undefined) requestName(msg.names);
+			}
+		}
+		let requestName = (names) => {
+			running = false;
+	        	document.getElementById('submit').enabled = true;
+		        document.getElementById('login').classList.add('on');
+		        document.getElementById('name').focus();
+			document.getElementById('taken').textContent = (names && names?.length) ? (' (already taken: ' + names.join(', ') + ')'): '';
+		        let sendName = function() {
+				playerName = document.getElementById('name').value;
+				conn.reliableSend({'name': playerName});
+		        	document.getElementById('submit').enabled = false;
+			        document.getElementById('login').classList.remove('on');
+				running = playerId !== undefined;
+	        	}
+		        document.getElementById('submit').onclick = sendName;
+		        document.getElementById('name').onkeydown = function(e) {
+				if (e.keyCode == 13) sendName();
+			};
+		};
+		let pressed = new Map();
+		const encodeKeys = () => Array.from(pressed.entries()).map( _ => _.join('')).join(',');
+		setInterval( () =>{
+			if (running){
+				conn.send( { [Fields.KeyDown]: encodeKeys() } );
+			}
+		}, 100);
+		document.onkeydown = function(e) {
+			log('main', 'keydown', [e.keyCode, e.repeat, msg, Date.now()]);
+			if (e.repeat) return false;
+			if (document.activeElement && document.activeElement.tagName == 'input') return;
+			/* l */
+			if (e.keyCode == 76) {
+				document.body.classList.toggle('separate');
+				window.onresize();
+				return;
+			}
+			/* f */
+			if (e.keyCode == 70) {
+				renderer.zoomIn();
+			}
+			if (e.keyCode == 9 && score) {
+			if (playerName && !score.some(function(n) {
+					return n.name == playerName;
+				})) score.push({
+					'name': playerName,
+					'amount': 0
+				});
+				let scoreElem = document.getElementById('score');
+				scoreElem.classList.toggle('on');
+				let table = '<table border=0><tr><th>Score</th></tr>';
+				for (let i = 0; i < score.length; i++) {
+					let scoreItem = score[i];
+					table += '<tr><td>' + scoreItem.name + '</td><td>' + scoreItem.amount + '</td></tr>';
+				}
+				scoreElem.innerHTML = table + '</table>';
+				return false;
+			}
+			if (!running) return true;
+			if (e.keyCode == 73 && e.target.nodeName != "INPUT") {
+				inverted = !inverted;
+				document.getElementById('inverted').style.display = inverted ? "block" : "none";
+			}
+			var key = (inverted ? IKeymap : Keymap)[e.keyCode];
+			if (key /*&& zeroTime*/) {
+				for(let k of Opposites[key]||[]){
+					pressed.delete(k);
+				}
+				var msg = {
+					[Fields.KeyDown]: encodeKeys()
+				};
+				if (key == Actions.Fire) {
+					if (world.shoot()){
+						msg[Fields.KeyDown] = Fields.Fire + msg[Fields.KeyDown];
+					}else return;
+				//outbuf.push(msg);
+				//presses.push(msg);
+				} else {
+					pressed.set(key, conn.send(msg));
+				}
+				//return false;
+			}
+		}
+		
+		document.onkeyup = function(e) {
+			log('main', 'keyup', [e.keyCode, e.repeat, msg, Date.now()]);
+			if (e.keyCode == 70) {
+				renderer.resetZoom();
+	        	}
+			if (!running) return true;
+			var key = (inverted ? IKeymap : Keymap)[e.keyCode];
+			if (key && key != 'f' && pressed.has(key)) {
+				pressed.delete(key);
+				var msg = {
+	//				Fields.KeyUp: pressed.get(e.keyCode),
+					[Fields.KeyDown]: encodeKeys()
+				};
+				//outbuf.push(msg);
+				//presses.push(msg);
+				conn.send(msg);
+				//return false;
+			}
+	    	}
+		window.onresize = function() {	
+			let screen = document.getElementById('screen');
+			renderer.resize( screen.clientWidth, screen.clientHeight ); 
+		}
+
+		function render() {
+			const now = Date.now();
+	/*		if (inception) {
+				var tick = (new Date()).getTime();
+				if (lastTime) power += tick - lastTime;
+				if (power > maxPower) power = maxPower;
+	            		updateFrame(tick);
+	            		lastTime = tick;
+	        	}*/
+			requestAnimationFrame(render);
+			renderer.render(world.get(now));
+			//offscreen.update(scene, camera, planets);
+		}
+		renderer.attach(document.getElementById('canv'));
+		window.onresize();
+		render();
+	}
+  </script>
+	
+</head>
+<body>
+<div id="screen">
+<i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+<i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+<i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+<i></i><i></i><i></i>
+<div id="canv"> </div>
+</div>
+<div id=overlay>
+<div style="transform:scaleY(-1); position:absolute;right:0px;">
+<svg id=flat width="100" height="100" viewBox="-49 -49 100 100">
+<g id=flatg >
+<g id=bodies >
+</g>
+</g>
+<polygon points="3,-3, 0,3 -3,-3" z="5" fill="blue" opacity="0.5" />
+</svg></div>
+
+</div>
+   	<div id=waiting class="center">connecting</div>
+	<div id=speed>0</div>
+	<div id=score>z</div>
+	<div id=login class="center"><div>enter your name<span id="taken"></span></div><nobr><input type=text id=name> <input type=button id=submit value=submit></nobr><br><div id=loginError></div></div>
+	<div id=dead class="center">(*_*)</div>
+	<div id=inverted>inverted Y</div>
+
+</body>
+

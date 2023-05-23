@@ -1,0 +1,85 @@
+	#waiting {opacity:0; color:red;}
+	body.connected #waiting{opacity:1}
+	
+	#speed{position:absolute; right: 0px;top:0px;}
+
+    #login {        background-color:white; }
+    #score, #dead {color:black; background-color:wheat;}
+   	#speed, #score, #login, #dead, #inverted{display:none}
+    
+	.center{
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-60%, -50%);
+    }
+    sv1g, #l1ag {width: 20vh; height: 20vh; position: absolute; background-color:silver;
+        bottom:20px;  z-index:5;   opacity: 0.2}
+    s1vg {left: 20px;}
+    #l1ag {right: 20px;}
+	#score.on, #login.on, #dead.on{display:block; border: solid 1px silver}
+	#score table {border-collapse:collapse; border:none}
+	#score table td:first-child { border-right: solid 1px black }
+	#score table tr:not(:last-child) td { border-bottom: solid 1px black }
+    #score { z-index:10}
+	#login {padding:20px;}
+    #inverted {position: absolute; left:0px; bottom: 0px;}
+
+/*    table {collapse-borders:collapse;}
+    td:not(#canvas):not(.ignore) {background-color:silver;}
+    td{ width:5px; height: 5px; }
+    td.on {background-color:yellow;}
+
+    #canvas { position: relative }
+    #canvas #frame {margin: 5px; border: solid 1px gray; 
+            position: absolute; top: 5px; left: 5px;
+            width: 50px; opacity:0.5; overflow: hidden}
+    #canvas #frame div { height: 10px; margin: 5px;}
+    #canvas #frame div:nth-child(1) { background-color: red}
+    #canvas #frame div:nth-child(2) { background-color: green}
+*/
+#screen {
+display: grid;
+grid-template-columns: 10px repeat(5, 1fr) 10px;
+grid-template-rows: 10px repeat(5, 1fr) 10px;
+grid-column-gap: 0px;
+grid-row-gap: 0px;
+width: calc(100vw - 18px);
+height: calc(100vh - 16px);
+
+}
+
+#canv { 
+	grid-area: 2 / 2 / 7 / 7; 
+	background:pink; 
+	width:calc(100% - 4px); 
+	height: calc(100% - 4px); 
+	margin: 2px; 
+	position: relative;
+}
+#screen i {background:silver; display:block; margin:2px;}
+
+#screen canvas {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+}
+/*
+#screen {position:absolute; width:100%; height:100%; 
+        top:0px;bottom:0px;left:0px;right:0px; background-color:navy;}
+*/
+#flat {/*right:0px;position:absolute;*/opacity:0.5; background-color:pink;/*width:15vw; height:15vw;*/   }
+#lag1, #lag2 {transform: scaleY(-1)}
+#lag1 {opacity:0.3; background-color:white;position:absolute; bottom:0px; height:10vh;width:49%; left:0px; }
+#lag2 {opacity:0.3; background-color:white;position:absolute; bottom:0px; height:10vh;width:49%;  right:0px}
+#overlay {position: absolute; top:25px; bottom:25px; left:25px; right:25px;}
+
+body.separate #screen{position:initial;float:right; width:66%}
+body.separate #overlay{position:relative;max-width:33%; height:100%; top:5px;
+    bottom:5px;left:initial;right:initial}
+body.separate #flat {width:100%;height:70%}
+body.separate #lag1 { bottom:0px; height:15%;width:100%; left:0px; right:0px}
+body.separate #lag2 { bottom:15%; height:15%;width:100%; left:0px; right:0px}
+
